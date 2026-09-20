@@ -1,0 +1,55 @@
+`timescale 1ns/1ps
+
+module tb_PatternDetectionFSM;
+
+    reg clk;
+    reg rst;
+    reg I;
+    
+    wire E;
+    wire Z;
+    
+    
+    PatternDetectionFSM uut(.clk(clk), .rst(rst), .I(I), .E(E), .Z(Z));
+    
+    always #10 clk = ~clk; // 50MHz clock
+    
+    initial begin
+        clk = 1'b0;
+        rst = 1'b0;
+        // Implement this test pattern(start at LSB):0010 0101 0011 1101 0111 0111
+        apply_reset; // Prints pass of the reset works
+        check(24'h253D77); // Test pattern in hex
+        @(posedge clk);
+        #1;
+        apply_reset; 
+        $finish;
+    end
+    
+    task apply_reset;
+        begin
+            rst = 1'b1;
+            #1;                     
+            if (uut.state !== 3'b000 || Z !== 0 || E !== 0)
+                $display("Fail");
+            else
+                $display("Pass");
+            @(posedge clk);
+            rst = 1'b0;
+        end
+    endtask
+    
+    task check;
+        input [23:0] pattern;
+        integer i;
+        
+        for(i = 0; i <24; i = i +1)begin
+            I = pattern[i];
+            @(posedge clk);
+            #1; // Wait for accurate state reading
+            $display("I: %b | State: %b | E: %b | Z: %b",I ,uut.state ,E ,Z);
+      
+        end
+    endtask
+
+endmodule
